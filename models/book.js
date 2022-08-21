@@ -1,4 +1,5 @@
 const db = require("../db");
+const ExpressError = require("../expressError");
 
 
 /** Collection of related methods for books. */
@@ -20,7 +21,7 @@ class Book {
                 publisher,
                 title,
                 year
-            FROM books 
+            FROM books
             WHERE isbn = $1`, [isbn]);
 
     if (bookRes.rows.length === 0) {
@@ -47,7 +48,7 @@ class Book {
                 publisher,
                 title,
                 year
-            FROM books 
+            FROM books
             ORDER BY title`);
 
     return booksRes.rows;
@@ -62,38 +63,42 @@ class Book {
    * */
 
   static async create(data) {
-    const result = await db.query(
-      `INSERT INTO books (
-            isbn,
-            amazon_url,
-            author,
-            language,
-            pages,
-            publisher,
-            title,
-            year) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-         RETURNING isbn,
-                   amazon_url,
-                   author,
-                   language,
-                   pages,
-                   publisher,
-                   title,
-                   year`,
-      [
-        data.isbn,
-        data.amazon_url,
-        data.author,
-        data.language,
-        data.pages,
-        data.publisher,
-        data.title,
-        data.year
-      ]
-    );
-
-    return result.rows[0];
+    try{
+      const result = await db.query(
+        `INSERT INTO books (
+              isbn,
+              amazon_url,
+              author,
+              language,
+              pages,
+              publisher,
+              title,
+              year)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           RETURNING isbn,
+                     amazon_url,
+                     author,
+                     language,
+                     pages,
+                     publisher,
+                     title,
+                     year`,
+        [
+          data.isbn,
+          data.amazon_url,
+          data.author,
+          data.language,
+          data.pages,
+          data.publisher,
+          data.title,
+          data.year
+        ]
+      );
+      return result.rows[0];
+    }
+    catch(e){
+      throw new ExpressError(`Error creating book: ${e}`, 400)
+    }
   }
 
   /** Update data with matching ID to data, return updated book.
@@ -106,7 +111,7 @@ class Book {
 
   static async update(isbn, data) {
     const result = await db.query(
-      `UPDATE books SET 
+      `UPDATE books SET
             amazon_url=($1),
             author=($2),
             language=($3),
@@ -124,13 +129,13 @@ class Book {
                   title,
                   year`,
       [
-        data.amazon_url,
-        data.author,
-        data.language,
-        data.pages,
-        data.publisher,
-        data.title,
-        data.year,
+        data.book.amazon_url,
+        data.book.author,
+        data.book.language,
+        data.book.pages,
+        data.book.publisher,
+        data.book.title,
+        data.book.year,
         isbn
       ]
     );
@@ -138,7 +143,6 @@ class Book {
     if (result.rows.length === 0) {
       throw { message: `There is no book with an isbn '${isbn}`, status: 404 }
     }
-
     return result.rows[0];
   }
 
@@ -146,8 +150,8 @@ class Book {
 
   static async remove(isbn) {
     const result = await db.query(
-      `DELETE FROM books 
-         WHERE isbn = $1 
+      `DELETE FROM books
+         WHERE isbn = $1
          RETURNING isbn`,
         [isbn]);
 

@@ -1,5 +1,7 @@
 const express = require("express");
 const Book = require("../models/book");
+const jsonschema = require('jsonschema');
+const bookSchema = require('../schemas/book.json');
 
 const router = new express.Router();
 
@@ -10,7 +12,8 @@ router.get("/", async function (req, res, next) {
   try {
     const books = await Book.findAll(req.query);
     return res.json({ books });
-  } catch (err) {
+  }
+  catch (err) {
     return next(err);
   }
 });
@@ -21,18 +24,30 @@ router.get("/:id", async function (req, res, next) {
   try {
     const book = await Book.findOne(req.params.id);
     return res.json({ book });
-  } catch (err) {
-    return next(err);
   }
+  catch (err) {
+    return next(err);
+  };
 });
 
 /** POST /   bookData => {book: newBook}  */
 
 router.post("/", async function (req, res, next) {
   try {
-    const book = await Book.create(req.body);
-    return res.status(201).json({ book });
-  } catch (err) {
+    const bookResult = jsonschema.validate(req.body, bookSchema)
+
+    if (!bookResult.valid){
+      bookResult.errors.map(err => {
+        throw { message: `Invalid json data: ${err}`, status: 400 }
+      });
+      return next(e)
+    }
+    else {
+      const book = await Book.create(req.body.book);
+      return res.status(201).json({ book });
+    }
+  }
+  catch (err) {
     return next(err);
   }
 });
@@ -41,9 +56,20 @@ router.post("/", async function (req, res, next) {
 
 router.put("/:isbn", async function (req, res, next) {
   try {
-    const book = await Book.update(req.params.isbn, req.body);
-    return res.json({ book });
-  } catch (err) {
+    const bookResult = jsonschema.validate(req.body, bookSchema)
+
+    if (!bookResult.valid){
+      bookResult.errors.map(err => {
+        throw { message: `Invalid json data: ${err}`, status: 400 }
+      });
+      return next(e)
+    }
+    else {
+      const book = await Book.update(req.params.isbn, req.body);
+      return res.json({ book });
+    }
+  }
+  catch (err) {
     return next(err);
   }
 });
@@ -54,7 +80,8 @@ router.delete("/:isbn", async function (req, res, next) {
   try {
     await Book.remove(req.params.isbn);
     return res.json({ message: "Book deleted" });
-  } catch (err) {
+  }
+  catch (err) {
     return next(err);
   }
 });
